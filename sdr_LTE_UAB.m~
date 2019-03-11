@@ -137,9 +137,10 @@ title('Log-likelihood function $\Lambda(\theta, \hat{\varepsilon}_{ML}(\theta))$
 %   Name this variable: 'freq_res'
 freq_res        =   -1/(2*pi) * angle(gamma(startCP));
 
-for i = 1:6
-    saveas(figure(i), sprintf('figure %d', i));
-end
+% for i = 1:6
+%     saveas(figure(i), sprintf('figure %d', i));
+% end
+close all;
 
 fprintf('Coarse timing offset = %d\n',startCP);
 fprintf('Normalized residual frequency = %.4f\n',freq_res);
@@ -152,55 +153,63 @@ s   =   r(m) .* exp(-j * (2 * pi * freq_res * m/N)).';
 %% Exercise 4. Cell sector detector by correlating PSS
 %   4.a) Define a vector with the first sample of the OFDM symbols over a
 %   radio frame.
-%TODO: test this and clean up
-v   =   zeros(70, 1);
-for i = 1:10
-    first       =   1 + 960 * (i-1);
-    second      =   first + 138;
-    others      =   second + 137:137:960*i;
-    slot        =   1+((i-1)*7):7*i;
-    v(slot)     =   [s(first); s(second); s(others)];
+% Indices of the first samples of every symbol in a slot
+% i.e. 11 : 128+9 : 11+6*(128+9)
+first_ind_slot         =   L_cpe+1 : N+L_cp : (L_cpe+1)+(N_symb_slot-1)*(N+L_cp);
+
+first_ind   =   nan(1, N_symb_slot*N_slot_frame/2);
+for nSlot = 0:(N_slot_frame/2) - 1
+    % Indices indicating symbols on a slot, i.e. 1 2 3 4 5 6 7, 8 9 10 ...
+    slot_samp   =   1 + (N_symb_slot*nSlot):N_symb_slot + (N_symb_slot*nSlot);
+    % Indices of the first samples of every symbol in half a frame
+    % i.e. 11 148 285 422 559 696 833, 971 1108 ...
+    first_ind(slot_samp) = first_ind_slot + (N_samp_slot*nSlot);
 end
 
 %   4.b) Correlate in the frequency domain the received samples with the
 %   PSS sequence generated with the genPSS(nCell) function
     % Initialize vector with N_cellSectors and N_symb_slot*N_slot_frame/2 zeros
-    maxPeak     =   zeros(N_symb_slot*N_slot_frame/2, 1);
+maxPeak     =   zeros(N_cellSectors, N_symb_slot*N_slot_frame/2);
 
     for nCell = 1:N_cellSectors
         % Initialize PSS sequence with N zeros
-        PSS_seq     =   zeros(N, 1);
+        PSS_seq         =   zeros(N, 1);
         % Use ind_SS vector to index PSS sequence vector with the PSS chips
         %   obtained by using �genPSS.m� function        
-        
+        PSS_seq(ind_SS) =   genPSS(nCell-1);
         
         for nInit = 1:N_symb_slot*N_slot_frame/2
             % Apply fft and fftshift to OFDM received symbols of N samples 
-            
+            sym     =   s(first_ind*nInit:first_ind*nInit+N-1);
+            sym_f   =   fftshift(fft(sym));
             % Multiply subcarrier by subcarrier the frequency received 
             %   signal with the conjugate of the PSS sequence, by using �.*�    
-
+            corr_f  =   sym_f .* conj(PSS_seq);
             % Apply ifft and fftshift to correlated signal in order to
             %   obtain the cross-correlation function
-
+            corr_t  =   fftshift(ifft(corr_f));
             % Find maximum and absolute value of the CCF and save it in 
             %   �maxPeak(nCell,nInit)�
-
+            maxPeak(nCell,nInit) = max(abs(corr_t));
         end
     end
 %   4.c) Find cell ID sector with maximum of 'maxPeak
 %   Name the cell ID sector variable as nID2
+[~, I]      =   max(maxPeak, [], 1);
+nID2        =   I-1;
 
-    fprintf('Cell Sector ID = ID2 = %d\n',nID2);
+fprintf('Cell Sector ID = ID2 = %d\n',nID2);
 %   4.d) Find first sample of the OFDM symbol corresponding to the PSS
 %   Name this index 'startPSS'
+first_samp      =   s(first_ind);
 
 %   4.e) Estimate integer CFO
+
 
 %   4.f) Obtain CFO
 %   Name CFO variable 'freq_offset'
 
-    fprintf('Normalized frequency offset = %.4f\n',freq_offset);
+fprintf('Normalized frequency offset = %.4f\n',freq_offset);
     
 %   4.g) Compensate frequency offset
 
