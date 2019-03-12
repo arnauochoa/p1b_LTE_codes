@@ -201,7 +201,6 @@ nID2        =   I-1;
 fprintf('Cell Sector ID = ID2 = %d\n',nID2);
 %   4.d) Find first sample of the OFDM symbol corresponding to the PSS
 %   Name this index 'startPSS'
-first_samp      =   s(first_ind);
 
 %   4.e) Estimate integer CFO
 
