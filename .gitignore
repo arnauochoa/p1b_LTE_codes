@@ -1,2 +1,6 @@
-# Don't track content of these folders
+# Don't track content of these files' extensions
 *.dat
+*.png
+*.jpg
+*.fig
+
